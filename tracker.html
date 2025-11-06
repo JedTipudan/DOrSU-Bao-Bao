@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BaoBao DORSU | Live Tracker</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #001f3f, #003366);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    header {
+      background: rgba(0, 40, 85, 0.9);
+      width: 100%;
+      padding: 15px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+      position: sticky;
+      top: 0;
+    }
+
+    header h1 {
+      color: #00bfff;
+      font-weight: 700;
+      font-size: 22px;
+    }
+
+    #map {
+      width: 90%;
+      height: 60vh;
+      border-radius: 20px;
+      margin: 25px auto;
+      box-shadow: 0 0 25px rgba(0, 191, 255, 0.4);
+      border: 3px solid #00bfff;
+    }
+
+    .ride-info {
+      text-align: center;
+      background: rgba(255,255,255,0.1);
+      padding: 15px;
+      border-radius: 15px;
+      width: 85%;
+      box-shadow: 0 0 10px rgba(0,191,255,0.3);
+    }
+
+    .ride-info h2 {
+      color: #00e6e6;
+      margin-bottom: 10px;
+    }
+
+    .ride-info p {
+      color: #cfe8ff;
+      font-size: 15px;
+    }
+
+    .bottom-buttons {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn {
+      background: linear-gradient(90deg, #00bfff, #0088cc);
+      border: none;
+      color: white;
+      padding: 10px 18px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: 0.3s;
+    }
+
+    .btn:hover {
+      background: linear-gradient(90deg, #00e6e6, #00bfff);
+      box-shadow: 0 0 10px rgba(0,191,255,0.6);
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+
+    /* Message driver popup */
+    .chat-window { height: 220px; overflow-y: auto; padding: 10px; background: #f5f7fb; border-radius: 10px; margin: 10px 0; }
+    .chat-row { display: flex; margin: 6px 0; }
+    .chat-row.me { justify-content: flex-end; }
+    .bubble { max-width: 75%; padding: 10px 12px; border-radius: 12px; font-size: 14px; line-height: 1.4; }
+    .bubble.them { background: #e9f6ff; color: #003a66; border: 1px solid #cfeeff; }
+    .bubble.me { background: #00bfff; color: #00213b; }
+    .chat-input { display: flex; gap: 8px; margin-top: 10px; }
+    .chat-input input { flex: 1; padding: 10px 12px; border-radius: 8px; border: 1px solid #cbd5e1; }
+    .chat-input button { padding: 10px 16px; border-radius: 8px; border: none; background: #00bfff; color: #fff; font-weight: 600; cursor: pointer; }
+
+    /* Rating popup */
+    .popup { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 10000; }
+    .popup-content { background: #ffffff; color: #1b2a41; width: 340px; max-width: 92%; padding: 22px; border-radius: 14px; box-shadow: 0 12px 30px rgba(0,0,0,0.35); text-align: center; }
+    .popup-content h3 { margin: 0 0 10px; color: #002855; }
+    .stars { display: flex; justify-content: center; gap: 8px; margin: 8px 0 12px; }
+    .star { font-size: 28px; cursor: pointer; color: #cbd5e1; transition: transform 0.1s ease, color 0.2s ease; }
+    .star.active { color: #ffc107; }
+    .star:hover { transform: scale(1.1); }
+    textarea { width: 100%; min-height: 80px; border-radius: 10px; border: 1px solid #cbd5e1; padding: 10px; resize: vertical; }
+    .popup-actions { margin-top: 12px; display: flex; gap: 8px; justify-content: center; }
+    .popup-actions .btn { padding: 10px 16px; border-radius: 10px; }
+
+    footer {
+      text-align: center;
+      color: #aaa;
+      margin-top: auto;
+      padding: 10px;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🛰️ BaoBao Tracker</h1>
+    <div id="eta">Arriving in 5 minutes...</div>
+  </header>
+
+  <div id="map"></div>
+
+  <div class="ride-info">
+    <h2>Driver: John Dela Cruz 🚗</h2>
+    <p>Plate: DRS-1023 | Destination: Poblacion | Gate 2</p>
+    <p>Status: <span id="rideStatus">On the way...</span></p>
+  </div>
+
+  <div class="bottom-buttons">
+    <button class="btn" onclick="window.location.href='dashboard.html'">Back to Dashboard</button>
+    <button id="openReport" class="btn">Report Issue</button>
+    <button id="openMessageDriver" class="btn">Message Driver</button>
+    <button id="openRating" class="btn" disabled>Rate Ride</button>
+  </div>
+
+  <!-- Rating Popup -->
+  <div id="ratingPopup" class="popup">
+    <div class="popup-content">
+      <h3>Rate your ride</h3>
+      <div class="stars">
+        <span class="star" data-value="1">★</span>
+        <span class="star" data-value="2">★</span>
+        <span class="star" data-value="3">★</span>
+        <span class="star" data-value="4">★</span>
+        <span class="star" data-value="5">★</span>
+      </div>
+      <textarea id="ratingComment" placeholder="Leave a comment (optional)"></textarea>
+      <div class="popup-actions">
+        <button id="cancelRating" class="btn" style="background:#e2e8f0; color:#1e293b;">Cancel</button>
+        <button id="confirmRating" class="btn">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="claimPopup" class="popup">
+    <div class="popup-content">
+      <h3 id="claimTitle">Claim 5 points</h3>
+      <p id="claimMessage">Choose an option to unlock your points.</p>
+      <div class="popup-actions" style="margin-top:14px;">
+        <button id="watchAd" class="btn">Watch Ad</button>
+        <button id="waitOption" class="btn" style="background:#e2e8f0; color:#1e293b;">Wait</button>
+      </div>
+      <div style="margin-top:10px; color:#1e293b;" id="claimTimer"></div>
+      <div class="popup-actions" style="margin-top:12px;">
+        <button id="claimPoints" class="btn" disabled>Claim 5 Points</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Report Issue Popup -->
+  <div id="reportPopup" class="popup">
+    <div class="popup-content">
+      <h3>Report an issue</h3>
+      <div style="text-align:left; font-size:14px; color:#334155; margin:8px 0 6px;">Issue Type</div>
+      <select id="issueType" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1;">
+        <option>Driver behavior</option>
+        <option>Pricing concern</option>
+        <option>Vehicle issue</option>
+        <option>Safety concern</option>
+        <option>Other</option>
+      </select>
+      <div style="text-align:left; font-size:14px; color:#334155; margin:12px 0 6px;">Details</div>
+      <textarea id="issueDetails" placeholder="Describe what happened..." style="min-height:100px; width:100%; border-radius:10px; border:1px solid #cbd5e1; padding:10px;"></textarea>
+      <div class="popup-actions">
+        <button id="cancelReport" class="btn" style="background:#e2e8f0; color:#1e293b;">Cancel</button>
+        <button id="submitReport" class="btn">Submit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Message Driver Popup -->
+  <div id="msgDriverPopup" class="popup">
+    <div class="popup-content" style="width:360px;">
+      <h3>Message Driver</h3>
+      <div id="mdChatBody" class="chat-window">
+        <div class="chat-row"><div class="bubble them">Hi! This is your driver. I'll arrive soon.</div></div>
+        <div class="chat-row"><div class="bubble them">Tip: You can see my live location on this page.</div></div>
+      </div>
+      <div class="chat-input">
+        <input id="mdChatInput" type="text" placeholder="Type a message..." />
+        <button id="mdSend">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading overlay for redirect -->
+  <div id="loadingOverlay" class="popup" style="background: rgba(0,0,0,0.85);">
+    <div class="popup-content" style="background:#0b1f33; color:#e6f7ff; border:1px solid #00bfff;">
+      <h3 style="color:#00e6e6;">Saving rating...</h3>
+      <div style="margin-top:10px;">
+        <div style="width:38px; height:38px; border:4px solid rgba(0,191,255,0.25); border-top-color:#00bfff; border-radius:50%; margin:8px auto; animation: spin 0.9s linear infinite;"></div>
+      </div>
+      <p style="margin:8px 0 0; color:#9edbff;">Redirecting to dashboard</p>
+    </div>
+  </div>
+
+  <!-- Claim success popup with countdown -->
+  <div id="claimSuccess" class="popup">
+    <div class="popup-content">
+      <h3>Congrats!</h3>
+      <p id="claimSuccessMsg">You claimed 5 points.</p>
+      <p style="margin-top:6px;">Returning to dashboard in <span id="claimCountdown">5</span>s...</p>
+    </div>
+  </div>
+
+  <footer> 2025 BaoBao DORSU — Real-Time Tracking Demo</footer>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const center = [7.1327, 126.4456];
+      const map = L.map('map', { zoomControl: true }).setView(center, 14);
+
+      // Dark basemap for nicer demo theme
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap contributors & CARTO'
+      }).addTo(map);
+
+      const scooterIcon = L.icon({
+        iconUrl: 'https://img.icons8.com/color/48/000000/scooter.png',
+        iconSize: [45, 45],
+        iconAnchor: [22, 22]
+      });
+
+      // Start and destination
+      const start = [...center];
+      const destination = [center[0] + 0.006, center[1] + 0.003];
+
+      // Route polyline
+      const route = L.polyline([start, destination], { color: '#00bfff', weight: 4, opacity: 0.7 }).addTo(map);
+      map.fitBounds(route.getBounds(), { padding: [30, 30] });
+
+      // Destination marker
+      L.circleMarker(destination, {
+        radius: 7,
+        color: '#00e6e6',
+        fillColor: '#00e6e6',
+        fillOpacity: 0.9
+      }).addTo(map).bindTooltip('Destination', { permanent: false, direction: 'top' });
+
+      // Moving BaoBao marker
+      let baobaoPos = [...start];
+      const marker = L.marker(baobaoPos, { icon: scooterIcon }).addTo(map);
+
+      // Pulsing ring effect near the marker
+      const pulse = L.circle(baobaoPos, { radius: 30, color: '#00bfff', weight: 2, opacity: 0.7, fillColor: '#00bfff', fillOpacity: 0.15 }).addTo(map);
+
+      // Smooth animation towards destination
+      const steps = 250; // more steps = smoother
+      const intervalMs = 120;
+      let step = 0;
+
+      function lerp(a, b, t) { return a + (b - a) * t; }
+
+      const totalDistance = Math.hypot(destination[0] - start[0], destination[1] - start[1]);
+      const totalSeconds = (steps * intervalMs) / 1000;
+      const etaEl = document.getElementById('eta');
+
+      const timer = setInterval(() => {
+        step++;
+        const t = Math.min(1, step / steps);
+        baobaoPos = [
+          lerp(start[0], destination[0], t),
+          lerp(start[1], destination[1], t)
+        ];
+        marker.setLatLng(baobaoPos);
+        pulse.setLatLng(baobaoPos);
+
+        // Pulse animation (radius and opacity wobble)
+        const r = 25 + Math.sin(step / 6) * 8;
+        const op = 0.12 + (Math.sin(step / 8) + 1) * 0.08;
+        pulse.setStyle({ radius: r, fillOpacity: op, opacity: 0.5 + op });
+
+        // Keep map roughly centered on the marker
+        if (step % 5 === 0) map.panTo(baobaoPos, { animate: true });
+
+        // ETA update
+        const remainingT = totalSeconds * (1 - t);
+        const mins = Math.max(0, Math.floor(remainingT / 60));
+        const secs = Math.max(0, Math.round(remainingT % 60));
+        etaEl.textContent = `Arriving in ${mins > 0 ? mins + ' min ' : ''}${secs}s...`;
+
+        if (t >= 1) {
+          clearInterval(timer);
+          document.getElementById('rideStatus').textContent = 'Arrived 🎉';
+          etaEl.textContent = 'Arrived';
+          pulse.setStyle({ radius: 15, fillOpacity: 0.2, opacity: 0.4 });
+          // Enable rating button on arrival
+          openRatingBtn.removeAttribute('disabled');
+          setTimeout(() => { openRatingPopup(); }, 800);
+        }
+      }, intervalMs);
+
+      // Double-click to recenter on the BaoBao
+      map.on('dblclick', function () { map.panTo(baobaoPos, { animate: true }); });
+
+      // Rating popup logic
+      const ratingPopup = document.getElementById('ratingPopup');
+      const openRatingBtn = document.getElementById('openRating');
+      const confirmBtn = document.getElementById('confirmRating');
+      const cancelBtn = document.getElementById('cancelRating');
+      const stars = Array.from(document.querySelectorAll('.star'));
+      const commentEl = document.getElementById('ratingComment');
+      let ratingValue = 0;
+
+      function renderStars() {
+        stars.forEach(st => {
+          const v = Number(st.getAttribute('data-value'));
+          st.classList.toggle('active', v <= ratingValue);
+        });
+      }
+
+      stars.forEach(st => {
+        st.addEventListener('click', () => {
+          ratingValue = Number(st.getAttribute('data-value'));
+          renderStars();
+        });
+        st.addEventListener('mouseenter', () => {
+          const temp = Number(st.getAttribute('data-value'));
+          stars.forEach(s => s.classList.toggle('active', Number(s.getAttribute('data-value')) <= temp));
+        });
+      });
+      document.querySelector('.stars').addEventListener('mouseleave', renderStars);
+
+      function openRatingPopup() { ratingPopup.style.display = 'flex'; }
+      function closeRatingPopup() { ratingPopup.style.display = 'none'; }
+
+      openRatingBtn.addEventListener('click', () => { if (!openRatingBtn.disabled) openRatingPopup(); });
+      cancelBtn.addEventListener('click', closeRatingPopup);
+      ratingPopup.addEventListener('click', (e) => { if (e.target === ratingPopup) closeRatingPopup(); });
+
+      const claimPopup = document.getElementById('claimPopup');
+      const watchAdBtn = document.getElementById('watchAd');
+      const waitBtn = document.getElementById('waitOption');
+      const claimBtn = document.getElementById('claimPoints');
+      const claimTimer = document.getElementById('claimTimer');
+      const claimSuccess = document.getElementById('claimSuccess');
+      const claimSuccessMsg = document.getElementById('claimSuccessMsg');
+      const claimCountdown = document.getElementById('claimCountdown');
+
+      let unlockMode = null;
+      let timerId = null;
+
+      function openClaim(){ claimPopup.style.display = 'flex'; }
+      function closeClaim(){ claimPopup.style.display = 'none'; }
+
+      function enableClaimAfter(seconds){
+        let t = seconds;
+        claimBtn.disabled = true;
+        claimTimer.textContent = `Please wait ${t}s...`;
+        clearInterval(timerId);
+        timerId = setInterval(() => {
+          t--;
+          claimTimer.textContent = t > 0 ? `Please wait ${t}s...` : 'You can claim now.';
+          if (t <= 0) {
+            clearInterval(timerId);
+            claimBtn.disabled = false;
+          }
+        }, 1000);
+      }
+
+      watchAdBtn.addEventListener('click', () => {
+        unlockMode = 'ad';
+        watchAdBtn.disabled = true;
+        waitBtn.disabled = true;
+        enableClaimAfter(10);
+      });
+
+      waitBtn.addEventListener('click', () => {
+        unlockMode = 'wait';
+        watchAdBtn.disabled = true;
+        waitBtn.disabled = true;
+        enableClaimAfter(15);
+      });
+
+      function addPointsAndMaybeFreeRide(pointsToAdd){
+        const current = parseInt(localStorage.getItem('bb_points')||'0',10);
+        const newTotal = current + pointsToAdd;
+        localStorage.setItem('bb_points', String(newTotal % 50));
+        const earnedFree = Math.floor(newTotal / 50) - Math.floor(current / 50);
+        if (earnedFree > 0) {
+          const fr = parseInt(localStorage.getItem('bb_free_rides')||'0',10) + earnedFree;
+          localStorage.setItem('bb_free_rides', String(fr));
+        }
+        localStorage.setItem('bb_last_claim_time', String(Date.now()));
+      }
+
+      claimBtn.addEventListener('click', () => {
+        addPointsAndMaybeFreeRide(5);
+        closeClaim();
+        let t = 5;
+        if (claimSuccessMsg) claimSuccessMsg.textContent = 'You claimed 5 points.';
+        if (claimCountdown) claimCountdown.textContent = String(t);
+        if (claimSuccess) claimSuccess.style.display = 'flex';
+        const id = setInterval(() => {
+          t--;
+          if (claimCountdown) claimCountdown.textContent = String(Math.max(0, t));
+          if (t <= 0) {
+            clearInterval(id);
+            window.location.href = 'dashboard.html';
+          }
+        }, 1000);
+      });
+
+      confirmBtn.addEventListener('click', () => {
+        if (ratingValue === 0) {
+          alert('Please select a star rating.');
+          return;
+        }
+        closeRatingPopup();
+        openClaim();
+        watchAdBtn.disabled = false;
+        waitBtn.disabled = false;
+        claimBtn.disabled = true;
+        claimTimer.textContent = '';
+      });
+
+      // Report issue logic
+      const reportPopup = document.getElementById('reportPopup');
+      const openReportBtn = document.getElementById('openReport');
+      const cancelReportBtn = document.getElementById('cancelReport');
+      const submitReportBtn = document.getElementById('submitReport');
+      function openReport() { reportPopup.style.display = 'flex'; }
+      function closeReport() { reportPopup.style.display = 'none'; }
+      openReportBtn.addEventListener('click', openReport);
+      cancelReportBtn.addEventListener('click', closeReport);
+      reportPopup.addEventListener('click', (e) => { if (e.target === reportPopup) closeReport(); });
+      submitReportBtn.addEventListener('click', () => { closeReport(); alert('Thanks! Your report has been received.'); });
+
+      // Message Driver logic
+      const msgPopup = document.getElementById('msgDriverPopup');
+      const openMsgBtn = document.getElementById('openMessageDriver');
+      const mdChatBody = document.getElementById('mdChatBody');
+      const mdChatInput = document.getElementById('mdChatInput');
+      const mdSend = document.getElementById('mdSend');
+      function openMsg(){ msgPopup.style.display = 'flex'; mdChatInput.focus(); }
+      function closeMsg(){ msgPopup.style.display = 'none'; }
+      openMsgBtn.addEventListener('click', openMsg);
+      msgPopup.addEventListener('click', (e) => { if (e.target === msgPopup) closeMsg(); });
+      mdSend.addEventListener('click', () => {
+        const text = (mdChatInput.value||'').trim(); if(!text) return; mdChatInput.value='';
+        const meRow = document.createElement('div'); meRow.className='chat-row me'; meRow.innerHTML = `<div class="bubble me">${text}</div>`; mdChatBody.appendChild(meRow);
+        mdChatBody.scrollTop = mdChatBody.scrollHeight;
+        setTimeout(() => {
+          const them = document.createElement('div'); them.className='chat-row'; them.innerHTML = `<div class=\"bubble them\">Got it! I will be there shortly. 👍</div>`; mdChatBody.appendChild(them);
+          mdChatBody.scrollTop = mdChatBody.scrollHeight;
+        }, 600);
+      });
+    });
+  </script>
+</body>
+</html>
