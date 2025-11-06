@@ -222,7 +222,16 @@
     </div>
   </div>
 
-  <footer>© 2025 BaoBao DORSU — Real-Time Tracking Demo</footer>
+  <!-- Claim success popup with countdown -->
+  <div id="claimSuccess" class="popup">
+    <div class="popup-content">
+      <h3>Congrats!</h3>
+      <p id="claimSuccessMsg">You claimed 5 points.</p>
+      <p style="margin-top:6px;">Returning to dashboard in <span id="claimCountdown">5</span>s...</p>
+    </div>
+  </div>
+
+  <footer> 2025 BaoBao DORSU — Real-Time Tracking Demo</footer>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script>
@@ -353,6 +362,9 @@
       const waitBtn = document.getElementById('waitOption');
       const claimBtn = document.getElementById('claimPoints');
       const claimTimer = document.getElementById('claimTimer');
+      const claimSuccess = document.getElementById('claimSuccess');
+      const claimSuccessMsg = document.getElementById('claimSuccessMsg');
+      const claimCountdown = document.getElementById('claimCountdown');
 
       let unlockMode = null;
       let timerId = null;
@@ -404,9 +416,18 @@
       claimBtn.addEventListener('click', () => {
         addPointsAndMaybeFreeRide(5);
         closeClaim();
-        const loading = document.getElementById('loadingOverlay');
-        loading.style.display = 'flex';
-        setTimeout(() => { window.location.href = 'dashboard.html'; }, 1000);
+        let t = 5;
+        if (claimSuccessMsg) claimSuccessMsg.textContent = 'You claimed 5 points.';
+        if (claimCountdown) claimCountdown.textContent = String(t);
+        if (claimSuccess) claimSuccess.style.display = 'flex';
+        const id = setInterval(() => {
+          t--;
+          if (claimCountdown) claimCountdown.textContent = String(Math.max(0, t));
+          if (t <= 0) {
+            clearInterval(id);
+            window.location.href = 'dashboard.html';
+          }
+        }, 1000);
       });
 
       confirmBtn.addEventListener('click', () => {
