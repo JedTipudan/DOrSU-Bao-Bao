@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BaoBao DORSU | Dashboard</title>
+  <style>
+    * {margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif;}
+    body {
+      background: linear-gradient(135deg, #001f3f, #003366);
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: rgba(0, 40, 85, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 15px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+    header h1 {font-size: 24px; font-weight: 700; color: #00bfff;}
+    .nav-right {display: flex; align-items: center; gap: 15px;}
+    .nav-right img {width: 35px; height: 35px; border-radius: 50%; border: 2px solid #00bfff; cursor: pointer;}
+
+    .search-section {text-align: center; margin: 30px auto 10px auto; width: 90%; max-width: 600px;}
+    .search-section input {
+      width: 100%; padding: 12px 20px; border-radius: 30px; border: none;
+      outline: none; font-size: 16px;
+      background: rgba(255, 255, 255, 0.1); color: #fff;
+      box-shadow: 0 0 10px rgba(0, 191, 255, 0.3);
+      transition: 0.3s;
+    }
+    .search-section input:focus {
+      background: rgba(255, 255, 255, 0.2);
+      box-shadow: 0 0 20px rgba(0, 191, 255, 0.6);
+    }
+
+    .bao-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+      gap: 25px; padding: 30px; width: 100%;
+    }
+
+    .baobao-card {
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 18px;
+      overflow: hidden;
+      position: relative;
+      transition: all 0.4s ease;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+    }
+    .baobao-card:hover {transform: translateY(-5px); box-shadow: 0 12px 30px rgba(0, 191, 255, 0.4);}
+    .baobao-card img {width: 100%; height: 200px; object-fit: cover; border-bottom: 3px solid #00bfff;}
+    .baobao-info {padding: 15px;}
+    .baobao-info h2 {font-size: 18px; margin-bottom: 5px;}
+    .baobao-info p {font-size: 14px; margin-bottom: 5px;}
+    .timer {color: #00e6e6; font-weight: 600;}
+
+    .book-btn {
+      margin-top: 10px;
+      background: linear-gradient(90deg, #00bfff, #0088cc);
+      border: none;
+      padding: 10px; width: 100%;
+      border-radius: 10px; color: white;
+      font-weight: 600; cursor: pointer; transition: 0.3s;
+    }
+    .book-btn:hover:not(:disabled) {
+      background: linear-gradient(90deg, #0099ff, #00e6e6);
+      box-shadow: 0 0 10px rgba(0, 191, 255, 0.6);
+    }
+    .book-btn:disabled {cursor: not-allowed; background: #888;}
+
+    .popup {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      display: none; justify-content: center; align-items: center;
+      z-index: 9999;
+    }
+    .popup-content {
+      background: #fff; color: #333; padding: 30px; border-radius: 15px;
+      width: 320px; text-align: center; position: relative;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+      animation: fadeIn 0.4s ease;
+    }
+    .popup-content h3 {color: #002855;}
+    .popup-content button {
+      background: #00bfff; border: none; color: #fff;
+      padding: 10px 20px; margin: 10px 5px; border-radius: 8px;
+      cursor: pointer; transition: 0.3s;
+    }
+    .popup-content button:hover:not(:disabled) {background: #0099cc;}
+    .close-btn {position: absolute; right: 15px; top: 10px; font-size: 20px; color: #888; cursor: pointer;}
+    .close-btn:hover {color: #000;}
+
+    /* Header nav buttons */
+    .msg-btn, .nav-btn {
+      background: transparent;
+      border: 2px solid #00bfff;
+      color: #00bfff;
+      padding: 8px 14px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: 0.3s;
+    }
+    .msg-btn:hover, .nav-btn:hover { background: #00bfff; color: #002855; }
+
+    /* Chat demo */
+    .chat-window { height: 260px; overflow-y: auto; padding: 10px; background: #f5f7fb; border-radius: 10px; margin: 10px 0; }
+    .chat-row { display: flex; margin: 6px 0; }
+    .chat-row.me { justify-content: flex-end; }
+    .bubble { max-width: 75%; padding: 10px 12px; border-radius: 12px; font-size: 14px; line-height: 1.4; }
+    .bubble.them { background: #e9f6ff; color: #003a66; border: 1px solid #cfeeff; }
+    .bubble.me { background: #00bfff; color: #00213b; }
+    .chat-input { display: flex; gap: 8px; margin-top: 10px; }
+    .chat-input input { flex: 1; padding: 10px 12px; border-radius: 8px; border: 1px solid #cbd5e1; }
+    .chat-input button { padding: 10px 16px; border-radius: 8px; border: none; background: #00bfff; color: #fff; font-weight: 600; cursor: pointer; }
+
+    /* Floating chat bubble (top-right) */
+    #dashChatBtn { position: fixed; right: 20px; bottom: 20px; width: 54px; height: 54px; border-radius: 50%; border: none; background: linear-gradient(135deg,#00bfff,#0088cc); color: #fff; box-shadow: 0 10px 24px rgba(0,0,0,0.3); cursor: pointer; z-index: 1200; }
+    #dashChatBtn:after { content: '💬'; font-size: 22px; }
+    #dashChatPanel { position: fixed; right: 20px; bottom: 86px; width: 320px; background: #ffffff; border: 1px solid #cfe8ff; border-radius: 14px; box-shadow: 0 12px 30px rgba(0,0,0,0.25); display: none; z-index: 1200; overflow: hidden; }
+    .dashChatHeader { background: #002855; color: #e6f7ff; padding: 10px 12px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+    .dashChatBody { background: #f6fbff; height: 240px; overflow-y: auto; padding: 10px; }
+    .dashRow { display: flex; margin: 6px 0; }
+    .dashRow.me { justify-content: flex-end; }
+    .dashBubble { max-width: 76%; padding: 8px 10px; border-radius: 10px; font-size: 14px; }
+    .dashBubble.them { background: #e9f6ff; color: #063b5c; border: 1px solid #cfe8ff; }
+    .dashBubble.me { background: #00bfff; color: #00213b; }
+    .dashChatInput { display: flex; gap: 6px; padding: 8px; background: #ffffff; border-top: 1px solid #edf2f7; }
+    .dashChatInput input { flex: 1; padding: 9px 10px; border-radius: 8px; border: 1px solid #cbd5e1; }
+    .dashChatInput button { padding: 9px 12px; border-radius: 8px; border: none; background: #00bfff; color: #fff; font-weight: 600; cursor: pointer; }
+
+    /* Toast */
+    .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(100px); background: rgba(0, 40, 85, 0.95); color: #e8f6ff; padding: 12px 18px; border-radius: 10px; box-shadow: 0 6px 18px rgba(0,0,0,0.35); opacity: 0; transition: all 0.35s ease; z-index: 10000; border: 1px solid #00bfff; }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    footer {
+      background: rgba(0, 0, 0, 0.7);
+      text-align: center;
+      padding: 15px;
+      color: #aaa;
+      font-size: 13px;
+      margin-top: auto;
+    }
+
+    @keyframes fadeIn {
+      from {opacity: 0; transform: scale(0.9);}
+      to {opacity: 1; transform: scale(1);}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>BaoBao DORSU</h1>
+    <div class="nav-right">
+      <span id="greetName">Hi, Student!</span>
+      <span id="pointsBadge" style="background:rgba(0,191,255,0.15); border:1px solid #00bfff; color:#9edbff; padding:6px 10px; border-radius:14px; font-size:12px;">Pts: <span id="pointsDisplay">0</span></span>
+      <span id="freeBadge" style="background:rgba(0,191,255,0.15); border:1px solid #00bfff; color:#9edbff; padding:6px 10px; border-radius:14px; font-size:12px;">Free: <span id="freeRidesDisplay">0</span></span>
+      <button id="editProfile" class="nav-btn">Edit Profile</button>
+      <button id="logoutBtn" class="nav-btn">Logout</button>
+      <img src="images/profile.png" alt="Profile">
+    </div>
+  </header>
+
+  <div class="search-section">
+    <input type="text" id="searchInput" placeholder="🔍 Search destination or gate...">
+  </div>
+
+  <div class="bao-container" id="baobaoList"></div>
+
+  <!-- Booking popup -->
+  <div class="popup" id="popupOverlay">
+    <div class="popup-content">
+      <span class="close-btn" onclick="document.getElementById('popupOverlay').style.display='none'">&times;</span>
+      <h3>Book this BaoBao?</h3>
+      <p>Please wait <span id="countdown">5</span> seconds...</p>
+      <button id="useFreeRide" disabled>Use Free Ride</button>
+      <button id="payPersonal" disabled>Pay Personal</button>
+      <button id="payOnline" disabled>Pay Online</button>
+    </div>
+  </div>
+
+  <!-- Success popup -->
+  <div class="popup" id="successPopup">
+    <div class="popup-content">
+      <span class="close-btn" onclick="document.getElementById('successPopup').style.display='none'">&times;</span>
+      <h3>Success!</h3>
+      <p>Your BaoBao booking has been confirmed 🎉</p>
+      <p style="margin-top:8px;">You can track your BaoBao's live location now.</p>
+      <button id="goTrack1">Track Now</button>
+    </div>
+  </div>
+
+  <!-- Payment QR popup -->
+  <div class="popup" id="paymentPopup">
+    <div class="popup-content">
+      <span class="close-btn" onclick="document.getElementById('paymentPopup').style.display='none'">&times;</span>
+      <h3>Scan to Pay</h3>
+      <img src="images/qr.png" alt="QR Code" style="width:200px; height:200px; margin: 15px 0;">
+      <p style="color:#333">After payment, you can proceed to tracking.</p>
+      <button id="goTrack2">Track Now</button>
+    </div>
+  </div>
+
+  <!-- Edit Profile popup -->
+  <div class="popup" id="profilePopup">
+    <div class="popup-content" style="width:360px;">
+      <span class="close-btn" onclick="document.getElementById('profilePopup').style.display='none'">&times;</span>
+      <h3>Edit Profile</h3>
+      <div style="text-align:left; font-size:14px; color:#334155; margin:8px 0 6px;">Name</div>
+      <input id="profileName" type="text" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1;" placeholder="Enter your name" />
+      <div style="text-align:left; font-size:14px; color:#334155; margin:12px 0 6px;">Email</div>
+      <input id="profileEmail" type="email" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1;" placeholder="your@email.com" />
+      <div style="margin-top:12px;">
+        <button id="saveProfile">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast notification -->
+  <div id="toast" class="toast">Payment selected! You can now track your BaoBao.</div>
+
+  <footer>© 2025 BaoBao DORSU — Developed for Student Transportation Assistance</footer>
+
+  <!-- Floating chat bubble + panel (auto-open) -->
+  <button id="dashChatBtn" title="Assistant"></button>
+  <div id="dashChatPanel">
+    <div class="dashChatHeader">Assistant Demo <span id="dashChatClose" style="cursor:pointer; opacity:0.85;">✕</span></div>
+    <div id="dashChatBody" class="dashChatBody">
+      <div class="dashRow"><div class="dashBubble them">Hi! Need help booking or tracking your BaoBao? This is a demo chat.</div></div>
+    </div>
+    <div class="dashChatInput">
+      <input id="dashChatInput" type="text" placeholder="Type a message...">
+      <button id="dashChatSend">Send</button>
+    </div>
+  </div>
+
+  <script>
+document.addEventListener("DOMContentLoaded", () => {
+  const list = document.getElementById("baobaoList");
+  const searchInput = document.getElementById("searchInput");
+  const popup = document.getElementById("popupOverlay");
+  const countdownEl = document.getElementById("countdown");
+  const payOnline = document.getElementById("payOnline");
+  const payPersonal = document.getElementById("payPersonal");
+  const successPopup = document.getElementById("successPopup");
+  const paymentPopup = document.getElementById("paymentPopup");
+  const profilePopup = document.getElementById("profilePopup");
+  const editProfileBtn = document.getElementById("editProfile");
+  const saveProfileBtn = document.getElementById("saveProfile");
+  const profileName = document.getElementById("profileName");
+  const profileEmail = document.getElementById("profileEmail");
+  const greetName = document.getElementById("greetName");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const goTrack1 = document.getElementById("goTrack1");
+  const goTrack2 = document.getElementById("goTrack2");
+  const dashChatBtn = document.getElementById("dashChatBtn");
+  const dashChatPanel = document.getElementById("dashChatPanel");
+  const dashChatClose = document.getElementById("dashChatClose");
+  const dashChatBody = document.getElementById("dashChatBody");
+  const dashChatInput = document.getElementById("dashChatInput");
+  const dashChatSend = document.getElementById("dashChatSend");
+  const toast = document.getElementById("toast");
+  const pointsDisplay = document.getElementById('pointsDisplay');
+  const freeRidesDisplay = document.getElementById('freeRidesDisplay');
+  const useFreeRide = document.getElementById('useFreeRide');
+
+  function showToast(message) {
+    if (!toast) return;
+    toast.textContent = message;
+    toast.classList.add("show");
+    setTimeout(() => { toast.classList.remove("show"); }, 2500);
+  }
+
+  const destinations = ["Matiao", "Martinez", "ER Mall", "Poblacion", "Baywalk"];
+  const gates = ["Gate 1", "Gate 2", "Gate 3"];
+
+  for (let i = 1; i <= 50; i++) {
+    const dest = destinations[(i - 1) % destinations.length];
+    const gate = gates[(i - 1) % gates.length];
+    const img = i % 2 === 0 ? "images/baobao2.jpg" : "images/baobao1.jpg";
+
+    const isAvailable = Math.random() > 0.5;
+    const passengersCount = isAvailable ? Math.floor(Math.random() * 5) : 5;
+    const passengersText = `${passengersCount}/5`;
+
+    const card = document.createElement("div");
+    card.className = "baobao-card";
+    card.dataset.available = isAvailable;
+    card.innerHTML = `
+      <img src="${img}" alt="BaoBao">
+      <div class="baobao-info">
+        <h2>${dest}</h2>
+        <p>Location: ${gate}</p>
+        <p>Passengers: ${passengersText}</p>
+        <p class="timer">Departure in: <span class="time"></span></p>
+        <button class="book-btn" ${isAvailable ? "" : "disabled"} 
+                style="cursor: ${isAvailable ? "pointer" : "not-allowed"}; 
+                       background: ${isAvailable ? "" : "#888"}">
+          ${isAvailable ? "Book Now" : "Full"}
+        </button>
+      </div>
+    `;
+    list.appendChild(card);
+
+    const timeDisplay = card.querySelector(".time");
+    const bookBtn = card.querySelector(".book-btn");
+
+    let seconds = Math.floor(Math.random() * 300) + 60;
+    const updateTimer = () => {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      timeDisplay.textContent = `${mins}:${secs.toString().padStart(2, "0")}`;
+    };
+    const timerInterval = setInterval(() => {
+      seconds--;
+      updateTimer();
+      if (seconds <= 0) {
+        clearInterval(timerInterval);
+        timeDisplay.textContent = "Departed 🚗💨";
+        bookBtn.disabled = true;
+        bookBtn.textContent = "Departed";
+        bookBtn.style.backgroundColor = "#888";
+        bookBtn.style.cursor = "not-allowed";
+      }
+    }, 1000);
+    updateTimer();
+
+    bookBtn.addEventListener("click", () => {
+      if (!isAvailable || bookBtn.disabled) return;
+      popup.style.display = "flex";
+      payOnline.disabled = true;
+      payPersonal.disabled = true;
+      // refresh loyalty state when opening popup
+      refreshLoyaltyUI();
+      let time = 5;
+      countdownEl.textContent = time;
+      const timer = setInterval(() => {
+        time--;
+        countdownEl.textContent = time;
+        if (time <= 0) {
+          clearInterval(timer);
+          payOnline.disabled = false;
+          payPersonal.disabled = false;
+        }
+      }, 1000);
+    });
+  }
+
+  searchInput.addEventListener("input", () => {
+    const term = searchInput.value.toLowerCase();
+    document.querySelectorAll(".baobao-card").forEach(card => {
+      const dest = card.querySelector("h2").textContent.toLowerCase();
+      card.style.display = dest.includes(term) ? "block" : "none";
+    });
+  });
+
+  payPersonal.addEventListener("click", () => {
+    popup.style.display = "none";
+    successPopup.style.display = "flex";
+    showToast("Payment selected! You can now track your BaoBao.");
+  });
+
+  // ✅ Pay Online opens QR popup
+  payOnline.addEventListener("click", () => {
+    popup.style.display = "none";
+    paymentPopup.style.display = "flex";
+    showToast("Payment selected! You can now track your BaoBao.");
+  });
+
+  // Go to tracker from success or payment popups
+  if (goTrack1) goTrack1.addEventListener("click", () => { window.location.href = "tracker.html"; });
+  if (goTrack2) goTrack2.addEventListener("click", () => { window.location.href = "tracker.html"; });
+
+  // Loyalty: load and show points/free rides
+  function refreshLoyaltyUI(){
+    const pts = parseInt(localStorage.getItem('bb_points')||'0',10);
+    const fr = parseInt(localStorage.getItem('bb_free_rides')||'0',10);
+    if (pointsDisplay) pointsDisplay.textContent = String(pts);
+    if (freeRidesDisplay) freeRidesDisplay.textContent = String(fr);
+    if (useFreeRide) useFreeRide.disabled = fr <= 0;
+  }
+  refreshLoyaltyUI();
+
+  // Use Free Ride flow
+  if (useFreeRide) {
+    useFreeRide.addEventListener('click', () => {
+      let fr = parseInt(localStorage.getItem('bb_free_rides')||'0',10);
+      if (fr <= 0) return;
+      fr -= 1;
+      localStorage.setItem('bb_free_rides', String(fr));
+      popup.style.display = 'none';
+      successPopup.style.display = 'flex';
+      showToast('Free ride applied!');
+      refreshLoyaltyUI();
+    });
+  }
+
+  // Profile: load saved name/email
+  const savedName = localStorage.getItem('bb_name');
+  if (savedName) greetName.textContent = `Hi, ${savedName}!`;
+  const savedEmail = localStorage.getItem('bb_email');
+
+  // Open edit profile
+  editProfileBtn.addEventListener('click', () => {
+    profileName.value = savedName || '';
+    profileEmail.value = savedEmail || '';
+    profilePopup.style.display = 'flex';
+  });
+
+  // Save profile
+  saveProfileBtn.addEventListener('click', () => {
+    const name = (profileName.value||'').trim();
+    const email = (profileEmail.value||'').trim();
+    if (name) {
+      localStorage.setItem('bb_name', name);
+      greetName.textContent = `Hi, ${name}!`;
+    }
+    if (email) localStorage.setItem('bb_email', email);
+    profilePopup.style.display = 'none';
+    showToast('Profile updated');
+  });
+
+  // Logout (demo): clear profile and go to landing
+  logoutBtn.addEventListener('click', () => {
+    localStorage.removeItem('bb_name');
+    localStorage.removeItem('bb_email');
+    window.location.href = 'index.html';
+  });
+
+  // Floating chat: helpers
+  function dashAppend(rowClass, text){
+    const row = document.createElement('div'); row.className = 'dashRow ' + (rowClass||'');
+    const b = document.createElement('div'); b.className = 'dashBubble ' + (rowClass==='me'?'me':'them'); b.textContent = text;
+    row.appendChild(b); dashChatBody.appendChild(row); dashChatBody.scrollTop = dashChatBody.scrollHeight;
+  }
+  function dashOpen(){ dashChatPanel.style.display = 'block'; dashChatInput.focus(); }
+  function dashClose(){ dashChatPanel.style.display = 'none'; }
+  dashChatBtn.addEventListener('click', () => { if(dashChatPanel.style.display==='block'){ dashClose(); } else { dashOpen(); } });
+  dashChatClose.addEventListener('click', dashClose);
+  dashChatSend.addEventListener('click', () => {
+    const text = (dashChatInput.value||'').trim(); if(!text) return; dashChatInput.value='';
+    dashAppend('me', text);
+    const row = document.createElement('div'); row.className = 'dashRow';
+    const b = document.createElement('div'); b.className = 'dashBubble them'; b.textContent = 'Loading AI…';
+    row.appendChild(b); dashChatBody.appendChild(row); dashChatBody.scrollTop = dashChatBody.scrollHeight;
+    if (window.generateAIResponse) {
+      window.generateAIResponse(text).then(function(resp){ b.textContent = resp; }).catch(function(){ b.textContent = 'Sorry, something went wrong.'; });
+    } else {
+      setTimeout(function(){ b.textContent = 'Thanks! For the demo, use Track Now to see live location.'; }, 500);
+    }
+  });
+
+  // Auto-open chat on dashboard load
+  setTimeout(() => { dashOpen(); }, 600);
+
+  // Close popups when clicking outside
+  [popup, paymentPopup, successPopup, profilePopup].forEach(p => {
+    p.addEventListener("click", e => {
+      if (e.target === p) p.style.display = "none";
+    });
+  });
+});
+</script>
+<script type="module" src="ai.js"></script>
+</body>
+</html>
